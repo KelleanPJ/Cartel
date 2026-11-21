@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14161a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cartel">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Cartel</title>
+<style>
+  :root{
+    --bg:#14161a; --card:#1e2127; --line:#30343c; --txt:#eceef2; --mute:#9aa1ad; --acc:#ffd23f;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; background:var(--bg); color:var(--txt);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; font-size:16px}
+  body{padding:env(safe-area-inset-top) 0 0}
+  main{max-width:640px; margin:0 auto; padding:14px 14px 110px}
+  h1{font-size:1.15rem; margin:4px 2px 12px; letter-spacing:.02em}
+  h1 span{color:var(--acc)}
+
+  /* Escenario (vista previa y pantalla completa) */
+  .stage{position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#000}
+  #preview{width:100%; border-radius:14px; border:1px solid var(--line); aspect-ratio:var(--ratio,2/1); max-height:42vh}
+  .txt{line-height:1.15; will-change:transform; margin:0}
+  .txt.static{position:relative; white-space:pre-wrap; text-align:center; overflow-wrap:anywhere; max-width:100%; padding:0 3%}
+  .txt.horizontal{position:absolute; left:0; top:50%; white-space:pre; padding:0 .15em}
+  .txt.vertical{position:absolute; left:0; top:0; width:100%; white-space:pre-wrap; text-align:center; overflow-wrap:anywhere; padding:0 4%}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-top:12px}
+  label.t{display:block; font-size:.8rem; color:var(--mute); text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px}
+  textarea{width:100%; min-height:84px; resize:vertical; background:#111317; color:var(--txt);
+    border:1px solid var(--line); border-radius:10px; padding:10px; font-size:1.05rem; font-family:inherit}
+  select{width:100%; background:#111317; color:var(--txt); border:1px solid var(--line); border-radius:10px;
+    padding:11px 10px; font-size:1rem}
+  .row{display:flex; gap:10px; align-items:center}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  input[type=range]{width:100%; accent-color:var(--acc); height:28px}
+  .val{min-width:3.2em; text-align:right; color:var(--acc); font-variant-numeric:tabular-nums}
+
+  .colorbox{display:flex; flex-direction:column; gap:8px}
+  .colorbox input[type=color]{width:100%; height:44px; border:1px solid var(--line); border-radius:10px; background:none; padding:2px}
+  .sw{display:flex; flex-wrap:wrap; gap:6px}
+  .sw button{width:26px; height:26px; border-radius:50%; border:2px solid #555; padding:0; cursor:pointer}
+  .swap{margin-top:10px; width:100%}
+
+  .btn{background:#2a2e36; color:var(--txt); border:1px solid var(--line); border-radius:10px; padding:11px 8px;
+    font-size:1rem; cursor:pointer; flex:1}
+  .btn[aria-pressed=true]{background:var(--acc); color:#111; border-color:var(--acc)}
+  .fmt .btn{font-size:1.15rem}
+  .seg{display:flex; gap:6px}
+  .seg .btn{font-size:.92rem}
+  .check{display:flex; gap:10px; align-items:center; margin-top:12px; color:var(--mute); font-size:.95rem}
+  .check input{width:20px; height:20px; accent-color:var(--acc)}
+
+  .go{position:fixed; left:0; right:0; bottom:0; padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+    background:linear-gradient(transparent, var(--bg) 35%)}
+  .go button{display:block; width:100%; max-width:612px; margin:0 auto; padding:16px; font-size:1.15rem; font-weight:700;
+    border:0; border-radius:14px; background:var(--acc); color:#111; cursor:pointer; letter-spacing:.03em}
+
+  /* Pantalla completa */
+  #show{position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; z-index:100; display:none; cursor:pointer}
+  #show.on{display:flex}
+  .top{display:flex; align-items:center; justify-content:space-between; gap:10px}
+  #installBtn{display:none; background:transparent; color:var(--acc); border:1px solid var(--acc);
+    border-radius:20px; padding:6px 14px; font-size:.9rem; cursor:pointer}
+  #iosTip{display:none; font-size:.88rem; color:var(--mute); background:var(--card); border:1px solid var(--line);
+    border-radius:12px; padding:10px 12px; margin:0 0 12px; line-height:1.4}
+  #iosTip b{color:var(--txt)}
+  #hint{position:absolute; bottom:14px; left:50%; transform:translateX(-50%); font:13px system-ui,sans-serif;
+    background:rgba(0,0,0,.55); color:#fff; padding:6px 12px; border-radius:20px; pointer-events:none;
+    transition:opacity .6s; white-space:nowrap}
+</style>
+</head>
+<body>
+<main id="config">
+  <div class="top">
+    <h1>📢 <span>Cartel</span> en pantalla</h1>
+    <button id="installBtn">⬇ Instalar</button>
+  </div>
+  <div id="iosTip">Para instalarla en el iPhone: toca <b>Compartir</b> (el cuadro con la flecha) y luego <b>“Agregar a inicio”</b>. <a href="#" id="iosTipClose" style="color:var(--acc)">Entendido</a></div>
+
+  <div class="stage" id="preview"><p class="txt static" id="previewText"></p></div>
+
+  <div class="card">
+    <label class="t" for="text">Mensaje</label>
+    <textarea id="text" placeholder="Escribe tu mensaje…"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="grid2">
+      <div class="colorbox">
+        <label class="t" for="bg">Fondo</label>
+        <input type="color" id="bg">
+        <div class="sw" data-for="bg"></div>
+      </div>
+      <div class="colorbox">
+        <label class="t" for="fg">Letra</label>
+        <input type="color" id="fg">
+        <div class="sw" data-for="fg"></div>
+      </div>
+    </div>
+    <button class="btn swap" id="swap">⇄ Intercambiar colores</button>
+  </div>
+
+  <div class="card">
+    <label class="t" for="font">Tipo de letra</label>
+    <select id="font"></select>
+
+    <label class="t" style="margin-top:14px">Tamaño</label>
+    <div class="row"><input type="range" id="size" min="5" max="100" step="1"><span class="val" id="sizeVal"></span></div>
+
+    <label class="t" style="margin-top:10px">Estilo</label>
+    <div class="row fmt">
+      <button class="btn" id="bold" style="font-weight:700">N</button>
+      <button class="btn" id="italic" style="font-style:italic; font-family:Georgia,serif">K</button>
+      <button class="btn" id="underline" style="text-decoration:underline">S</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label class="t">Movimiento</label>
+    <div class="seg" id="mode">
+      <button class="btn" data-mode="static">■ Estático</button>
+      <button class="btn" data-mode="horizontal">← Lateral</button>
+      <button class="btn" data-mode="vertical">↑ Vertical</button>
+    </div>
+    <div id="speedBox">
+      <label class="t" style="margin-top:14px">Velocidad</label>
+      <div class="row"><input type="range" id="speed" min="1" max="20" step="1"><span class="val" id="speedVal"></span></div>
+    </div>
+    <label class="check"><input type="checkbox" id="landscape"> Girar a horizontal al mostrar (si el teléfono lo permite)</label>
+  </div>
+</main>
+
+<div class="go"><button id="showBtn">▶ MOSTRAR A PANTALLA COMPLETA</button></div>
+
+<div class="stage" id="show"><p class="txt static" id="showText"></p><div id="hint">Toca para salir</div></div>
+
+<script>
+(function(){
+  'use strict';
+
+  var FONTS = [
+    {name:'Arial',            stack:'Arial, "Liberation Sans", Roboto, sans-serif'},
+    {name:'Helvetica',        stack:'"Helvetica Neue", Helvetica, Arial, sans-serif'},
+    {name:'Verdana',          stack:'Verdana, "DejaVu Sans", Geneva, sans-serif'},
+    {name:'Trebuchet MS',     stack:'"Trebuchet MS", "Lucida Grande", "Lucida Sans", sans-serif'},
+    {name:'Times New Roman',  stack:'"Times New Roman", Times, "Liberation Serif", "Noto Serif", serif'},
+    {name:'Georgia',          stack:'Georgia, "DejaVu Serif", "Noto Serif", serif'},
+    {name:'Garamond',         stack:'Garamond, "EB Garamond", "Palatino Linotype", Palatino, "Book Antiqua", serif'},
+    {name:'Courier New',      stack:'"Courier New", Courier, "Liberation Mono", "Droid Sans Mono", monospace'},
+    {name:'Impact',           stack:'Impact, Haettenschweiler, "Arial Narrow Bold", "Arial Black", sans-serif-condensed, sans-serif'},
+    {name:'Comic Sans MS',    stack:'"Comic Sans MS", "Comic Neue", "Chalkboard SE", "Coming Soon", cursive'}
+  ];
+  var SWATCHES = ['#000000','#ffffff','#ff1a1a','#ffd23f','#22dd44','#00e5ff','#1e5bff','#ff2bd6','#ff8a00'];
+  var DEFAULTS = {text:'¡HOLA!', bg:'#000000', fg:'#ffd23f', font:0, size:45, bold:true, italic:false,
+                  underline:false, mode:'static', speed:6, landscape:false};
+  var KEY = 'cartel-config-v1';
+
+  var S = load();
+
+  function load(){
+    var s = {};
+    try{ s = JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ s = {}; }
+    var out = {};
+    for (var k in DEFAULTS) out[k] = (k in s) ? s[k] : DEFAULTS[k];
+    return out;
+  }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  // ---------- Motor de dibujo ----------
+  function Board(stage, el){ this.stage = stage; this.el = el; this.raf = 0; }
+  Board.prototype.stop = function(){ if (this.raf) cancelAnimationFrame(this.raf); this.raf = 0; };
+  Board.prototype.run = function(s){
+    this.stop();
+    var st = this.stage, el = this.el, self = this;
+    var W = st.clientWidth, H = st.clientHeight;
+    if (!W || !H) return;
+    var base = Math.min(W, H);
+
+    st.style.background = s.bg;
+    el.className = 'txt ' + s.mode;
+    el.style.color = s.fg;
+    el.style.fontFamily = FONTS[s.font] ? FONTS[s.font].stack : FONTS[0].stack;
+    el.style.fontSize = (s.size / 100 * base) + 'px';
+    el.style.fontWeight = s.bold ? '700' : '400';
+    el.style.fontStyle = s.italic ? 'italic' : 'normal';
+    el.style.textDecoration = s.underline ? 'underline' : 'none';
+    var text = s.text && s.text.trim() ? s.text : ' ';
+    if (s.mode === 'horizontal') text = text.replace(/\s*\n\s*/g, '     ');
+    el.textContent = text;
+    el.style.transform = '';
+
+    if (s.mode === 'static') return;
+
+    var horiz = s.mode === 'horizontal';
+    var len = horiz ? el.offsetWidth : el.offsetHeight;
+    var max = horiz ? W : H;
+    var v = s.speed * base * 0.08;           // px por segundo
+    var pos = max, last = performance.now();
+    var put = function(){
+      el.style.transform = horiz ? 'translate3d(' + pos + 'px,-50%,0)' : 'translate3d(0,' + pos + 'px,0)';
+    };
+    put();
+    var tick = function(t){
+      var dt = Math.min(0.1, (t - last) / 1000); last = t;
+      pos -= v * dt;
+      if (pos < -len) pos = max;
+      put();
+      self.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+  };
+
+  var preview = new Board($('preview'), $('previewText'));
+  var full = new Board($('show'), $('showText'));
+
+  function setRatio(){
+    var a = Math.max(screen.width, screen.height), b = Math.min(screen.width, screen.height);
+    if (!a || !b){ a = 2; b = 1; }
+    $('preview').style.setProperty('--ratio', a + '/' + b);
+  }
+
+  // ---------- Interfaz ----------
+  var sel = $('font');
+  FONTS.forEach(function(f, i){
+    var o = document.createElement('option');
+    o.value = i; o.textContent = f.name; o.style.fontFamily = f.stack;
+    sel.appendChild(o);
+  });
+
+  document.querySelectorAll('.sw').forEach(function(box){
+    var target = box.getAttribute('data-for');
+    SWATCHES.forEach(function(c){
+      var b = document.createElement('button');
+      b.style.background = c; b.title = c; b.setAttribute('aria-label', c);
+      b.addEventListener('click', function(){ S[target] = c; sync(); });
+      box.appendChild(b);
+    });
+  });
+
+  function sync(){
+    $('text').value !== S.text && ($('text').value = S.text);
+    $('bg').value = S.bg; $('fg').value = S.fg;
+    sel.value = S.font;
+    $('size').value = S.size; $('sizeVal').textContent = S.size + '%';
+    $('speed').value = S.speed; $('speedVal').textContent = S.speed;
+    ['bold','italic','underline'].forEach(function(k){ $(k).setAttribute('aria-pressed', S[k] ? 'true' : 'false'); });
+    document.querySelectorAll('#mode .btn').forEach(function(b){
+      b.setAttribute('aria-pressed', b.getAttribute('data-mode') === S.mode ? 'true' : 'false');
+    });
+    $('speedBox').style.display = S.mode === 'static' ? 'none' : '';
+    $('landscape').checked = !!S.landscape;
+    save();
+    preview.run(S);
+  }
+
+  $('text').addEventListener('input', function(e){ S.text = e.target.value; sync(); });
+  $('bg').addEventListener('input', function(e){ S.bg = e.target.value; sync(); });
+  $('fg').addEventListener('input', function(e){ S.fg = e.target.value; sync(); });
+  sel.addEventListener('change', function(e){ S.font = +e.target.value; sync(); });
+  $('size').addEventListener('input', function(e){ S.size = +e.target.value; sync(); });
+  $('speed').addEventListener('input', function(e){ S.speed = +e.target.value; sync(); });
+  $('landscape').addEventListener('change', function(e){ S.landscape = e.target.checked; sync(); });
+  $('swap').addEventListener('click', function(){ var t = S.bg; S.bg = S.fg; S.fg = t; sync(); });
+  ['bold','italic','underline'].forEach(function(k){
+    $(k).addEventListener('click', function(){ S[k] = !S[k]; sync(); });
+  });
+  document.querySelectorAll('#mode .btn').forEach(function(b){
+    b.addEventListener('click', function(){ S.mode = b.getAttribute('data-mode'); sync(); });
+  });
+
+  // ---------- Pantalla completa ----------
+  var shown = false, openedAt = 0, wake = null, hintTimer = 0;
+
+  function requestWake(){
+    try{
+      if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(function(w){ wake = w; }).catch(function(){});
+    }catch(e){}
+  }
+  function releaseWake(){ try{ if (wake) wake.release(); }catch(e){} wake = null; }
+
+  function fsElement(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
+
+  function showFull(){
+    shown = true; openedAt = Date.now();
+    preview.stop();
+    $('show').classList.add('on');
+    var hint = $('hint'); hint.style.opacity = '1';
+    clearTimeout(hintTimer); hintTimer = setTimeout(function(){ hint.style.opacity = '0'; }, 1800);
+
+    var de = document.documentElement, p = null;
+    try{
+      if (de.requestFullscreen) p = de.requestFullscreen({navigationUI:'hide'});
+      else if (de.webkitRequestFullscreen) de.webkitRequestFullscreen();
+    }catch(e){}
+    Promise.resolve(p).catch(function(){}).then(function(){
+      if (S.landscape && screen.orientation && screen.orientation.lock){
+        return screen.orientation.lock('landscape').catch(function(){});
+      }
+    }).then(function(){ setTimeout(function(){ if (shown) full.run(S); }, 60); });
+
+    requestWake();
+    requestAnimationFrame(function(){ full.run(S); });
+  }
+
+  function hideFull(){
+    if (!shown) return;
+    shown = false;
+    full.stop();
+    $('show').classList.remove('on');
+    try{ if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
+    try{
+      if (fsElement()){
+        if (document.exitFullscreen) document.exitFullscreen().catch(function(){});
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      }
+    }catch(e){}
+    releaseWake();
+    setTimeout(function(){ preview.run(S); }, 80);
+  }
+
+  $('showBtn').addEventListener('click', showFull);
+  $('show').addEventListener('click', function(){ if (Date.now() - openedAt > 400) hideFull(); });
+
+  function onFsChange(){ if (!fsElement() && shown && Date.now() - openedAt > 800) hideFull(); }
+  document.addEventListener('fullscreenchange', onFsChange);
+  document.addEventListener('webkitfullscreenchange', onFsChange);
+
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible' && shown) requestWake();
+  });
+
+  var rt = 0;
+  window.addEventListener('resize', function(){
+    clearTimeout(rt);
+    rt = setTimeout(function(){
+      setRatio();
+      if (shown) full.run(S); else preview.run(S);
+    }, 120);
+  });
+
+  // ---------- App instalable (PWA) ----------
+  var standalone = (window.matchMedia && (matchMedia('(display-mode: standalone)').matches ||
+                    matchMedia('(display-mode: fullscreen)').matches)) || navigator.standalone === true;
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+    window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+  }
+  var deferred = null;
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault(); deferred = e; $('installBtn').style.display = 'inline-block';
+  });
+  $('installBtn').addEventListener('click', function(){
+    if (!deferred) return;
+    deferred.prompt();
+    deferred.userChoice.finally(function(){ deferred = null; $('installBtn').style.display = 'none'; });
+  });
+  window.addEventListener('appinstalled', function(){ $('installBtn').style.display = 'none'; });
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var tipSeen = false; try{ tipSeen = localStorage.getItem('cartel-ios-tip') === '1'; }catch(e){}
+  if (isIOS && !standalone && !tipSeen && /^https:$/.test(location.protocol)) $('iosTip').style.display = 'block';
+  $('iosTipClose').addEventListener('click', function(e){
+    e.preventDefault(); $('iosTip').style.display = 'none';
+    try{ localStorage.setItem('cartel-ios-tip', '1'); }catch(er){}
+  });
+
+  setRatio();
+  $('text').value = S.text;
+  sync();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ if (!shown) preview.run(S); });
+})();
+</script>
+</body>
+</html>

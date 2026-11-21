@@ -1,0 +1,18 @@
+{
+  "name": "Cartel en pantalla",
+  "short_name": "Cartel",
+  "description": "Usa la pantalla del teléfono como un cartel con tu mensaje.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#14161a",
+  "theme_color": "#14161a",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

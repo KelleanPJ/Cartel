@@ -292,7 +292,7 @@
     var cx0 = Math.floor((cols - t.w) / 2), cy0 = Math.floor((rows - t.h) / 2);
     if (!moving){ draw(cx0, cy0); return; }
 
-    var v = s.speed * 0.08 * s.ledRows;               // LEDs por segundo
+    var v = s.speed * 0.16 * s.ledRows;               // LEDs por segundo
     var pos = horiz ? cols : rows, len = horiz ? t.w : t.h, lastI = null, last = performance.now();
     var tick = function(now){
       var dt = Math.min(0.1, (now - last) / 1000); last = now;
@@ -333,7 +333,7 @@
     var horiz = s.mode === 'horizontal';
     var len = horiz ? el.offsetWidth : el.offsetHeight;
     var max = horiz ? W : H;
-    var v = s.speed * base * 0.08;           // px por segundo
+    var v = s.speed * base * 0.16;           // px por segundo
     var pos = max, last = performance.now();
     var put = function(){
       el.style.transform = horiz ? 'translate3d(' + pos + 'px,-50%,0)' : 'translate3d(0,' + pos + 'px,0)';

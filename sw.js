@@ -1,5 +1,6 @@
-// Service worker: guarda la app para que funcione sin internet.
-const CACHE = 'cartel-v1';
+// Service worker: guarda la app para que funcione sin internet
+// y descarga la versión nueva cuando hay conexión.
+const CACHE = 'cartel-v2';
 const FILES = [
   './',
   './index.html',
@@ -23,13 +24,25 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return;
+  const req = e.request;
+  if (req.method !== 'GET') return;
+
+  // La página: primero internet (para tener siempre la última versión), si no hay, la guardada.
+  if (req.mode === 'navigate') {
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put('./index.html', copy));
+          return res;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  // Íconos y demás: primero lo guardado.
   e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then((hit) => {
-      if (hit) return hit;
-      return fetch(e.request).catch(() =>
-        e.request.mode === 'navigate' ? caches.match('./index.html') : Response.error()
-      );
-    })
+    caches.match(req, { ignoreSearch: true }).then((hit) => hit || fetch(req))
   );
 });
